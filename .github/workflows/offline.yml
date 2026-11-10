@@ -1,0 +1,44 @@
+# INACTIVE: owner-reviewed copy target is canary .github/workflows/offline.yml.
+# Never copy this workflow/config into ProofGate production.
+name: Canary offline bootstrap
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: offline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check out canary only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate owner-bound canary marker
+        run: |
+          python3 -I -B - <<'PYCODE'
+          import json, os
+          from pathlib import Path
+          with Path('.proofgate-canary.json').open('rb') as stream:
+              raw = stream.read(2049)
+          assert len(raw) <= 2048, 'Canary marker exceeds size bound'
+          config = json.loads(raw)
+          assert set(config) == {'schema', 'purpose', 'repository', 'repository_id'}
+          assert type(config['schema']) is int and config['schema'] == 1
+          assert config['purpose'] == 'proofgate-authority-canary-v1'
+          assert isinstance(config['repository'], str)
+          assert config['repository'].startswith('deveshkakkar/')
+          assert config['repository'] == os.environ['GITHUB_REPOSITORY']
+          assert type(config['repository_id']) is int and config['repository_id'] > 0
+          assert config['repository_id'] != 1437623154, 'Production repository is forbidden'
+          assert str(config['repository_id']) == os.environ['GITHUB_REPOSITORY_ID']
+          print('PASS: owner-bound canary offline marker; not ProofGate application verification')
+          PYCODE

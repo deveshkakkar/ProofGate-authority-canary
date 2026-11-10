@@ -1,0 +1,6 @@
+# PROPOSAL ONLY — not installed at .github/CODEOWNERS.
+# Initial activation requires the human policy owner on every changed path,
+# including transitive evaluator/runtime dependencies and new helper files.
+# Scope may narrow only after a separately reviewed dependency/authority audit.
+# Owner credentials/approval tools must be unavailable to the coding agent.
+* @deveshkakkar
