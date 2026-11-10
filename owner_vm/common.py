@@ -8,7 +8,7 @@ from pathlib import Path
 import stat
 import subprocess
 
-ROOT = Path('/opt/proofgate-canary')
+ROOT = Path('/var/lib/proofgate-canary/runtime')
 ETC = Path('/etc/proofgate-canary')
 STATE = Path('/var/lib/proofgate-canary')
 SOCKET = Path('/run/proofgate-canary/issuer.sock')

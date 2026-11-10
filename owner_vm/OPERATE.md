@@ -4,7 +4,7 @@ This selects defaults; none is an assertion about an existing VM. Supported targ
 
 The immutable issuer input is `5609432116921acad9f10ef05c17140c170d72fb`. Its files are SHA256-verified from a public GitHub archive; original issuer code is not modified. Deployment files and launcher are content-pinned in `bundle-manifest.json`, reverified in the root-owned installed manifest. Dependencies use four exact wheel versions/hashes, with no source builds or package resolution. No PR1 bypass/merge is required or attempted: the owner reviews and executes this immutable preparation input outside Photon.
 
-Owner decisions are only **the isolated VM** and **the privately transferred key file**. Accounts `pg-issuer`, `pg-worker`, `pg-denied`, private groups and UIDs are discovered/created and validated automatically. Launcher is the existing trusted VM root account; candidate code always runs as pg-worker. Paths default to `/opt/proofgate-canary`, `/etc/proofgate-canary`, `/var/lib/proofgate-canary` and `/run/proofgate-canary`. These are VM-only defaults. The legacy config `photon_uid` field binds pg-denied, an unprivileged denial fixture; it does not assert Photon has an identity on this VM.
+Owner decisions are only **the isolated VM** and **the privately transferred key file**. Accounts `pg-issuer`, `pg-worker`, `pg-denied`, private groups and UIDs are discovered/created and validated automatically. Launcher is the existing trusted VM root account; candidate code always runs as pg-worker. Runtime defaults to `/var/lib/proofgate-canary/runtime`, configuration to `/etc/proofgate-canary`, state to `/var/lib/proofgate-canary` and IPC to `/run/proofgate-canary`. These are VM-only defaults. Runtime does not trust a potentially writable `/opt`, and installation sets an explicit022umask. The legacy config `photon_uid` field binds pg-denied, an unprivileged denial fixture; it does not assert Photon has an identity on this VM.
 
 From an owner-reviewed immutable checkout/archive of this bootstrap revision, in the owner VM console:
 
@@ -19,8 +19,8 @@ The worker is a fixed synthetic Python program, not a full LLM coding agent. It 
 Generate the App key **yourself** through owner GitHub settings and transfer it privately to your VM admin home with0400/0600 permissions. Do not send it to Photon, chat, CI or Git. Key source must be a regular file under protected, non-symlink ancestors (not `/tmp`). Import never generates or rotates a key, never echoes its contents, and retains your original source for owner-managed custody:
 
 ```sh
-sudo /opt/proofgate-canary/bin/owner-control import-key "$HOME/<owner-key-file>"
-sudo /opt/proofgate-canary/bin/owner-control trial
+sudo /var/lib/proofgate-canary/runtime/bin/owner-control import-key "$HOME/<owner-key-file>"
+sudo /var/lib/proofgate-canary/runtime/bin/owner-control trial
 ```
 
 The latter reruns OS preflight, starts the original issuer, independently checks live token scope, starts the real fixed worker and creates **one genuine App-authored synthetic canary PR**. The bearer stays inside trusted issuer/controller/gateway memory, outside both Photon and worker. Worker API requests cross a stdio gateway that allows only the canary positive-control sequence; wrapper denials are NOT GitHub permission-enforcement tests. Results must show proofgate-coder[bot] from actual GitHub response. Then issuer revokes and controller verifies denied token use(401). Five-minute lease does not change GitHub's provider expiry. Unknown privilege/revocation failure stops; owner contains the installation.
@@ -30,7 +30,7 @@ Only sanitized results under `/var/lib/proofgate-canary/results/`, the non-secre
 Once the actual PR has green required CI, **you review and approve its exact head in GitHub and perform the merge yourself**. No command here submits approval or merges. Then observe that specific local trial's positive control:
 
 ```sh
-sudo /opt/proofgate-canary/bin/owner-control observe-a14 <actual-pr-number> --human-ui-approval-and-merge
+sudo /var/lib/proofgate-canary/runtime/bin/owner-control observe-a14 <actual-pr-number> --human-ui-approval-and-merge
 ```
 
 The acknowledgement records your genuine human UI action; GitHub metadata alone cannot distinguish human interaction from automation under the same account. Observation binds the successful locally recorded trial, actual App author/branch/head, current owner approval, successful offline App15368 check and owner-operated merge. It does not establish full independent admission or policy freshness. A13 stays UNVERIFIED until its future actual authenticated negative test, without further configuration retries. No production activity is allowed.

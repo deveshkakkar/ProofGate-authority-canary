@@ -30,7 +30,7 @@ def observations():
         fd = os.open('/app/worker.py', os.O_WRONLY)
         os.close(fd)
     except OSError as error:
-        readonly = error.errno == errno.EROFS
+        readonly = bool(os.statvfs('/app').f_flag & os.ST_RDONLY) and error.errno in (errno.EROFS, errno.EACCES)
     network = False
     try:
         with socket.socket() as connection:

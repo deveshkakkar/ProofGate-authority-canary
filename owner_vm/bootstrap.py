@@ -117,6 +117,7 @@ def previous_setup(marker, bundle_sha):
 
 def prepare(ack):
     require(os.getuid() == 0 and ack, 'fresh_owner_vm_ack_required')
+    os.umask(0o022)  # Do not inherit a hosted runner's permissive umask into the immutable runtime.
     release = dict(line.split('=', 1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
     require(release.get('ID', '').strip('"') == 'ubuntu'
             and release.get('VERSION_ID', '').strip('"') == '24.04'
