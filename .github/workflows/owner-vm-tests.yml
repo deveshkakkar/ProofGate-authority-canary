@@ -45,6 +45,17 @@ jobs:
               source = pathlib.Path('/etc/proofgate-canary') / name
               if source.is_file():
                   (target / name).write_bytes(source.read_bytes())
+          source = pathlib.Path('/etc/proofgate-canary/installation.json')
+          if source.is_file():
+              paths = set()
+              for name in json.loads(source.read_bytes())['files']:
+                  path = pathlib.Path(name)
+                  paths.update([path, *path.parents])
+              rows = []
+              for path in sorted(paths):
+                  meta = path.lstat()
+                  rows.append({'path': str(path), 'uid': meta.st_uid, 'mode': oct(meta.st_mode & 0o7777), 'symlink': path.is_symlink()})
+              (target / 'code-permissions.json').write_text(json.dumps(rows))
           PY
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

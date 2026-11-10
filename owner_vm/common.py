@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import pwd
+import re
 from pathlib import Path
 import stat
 import subprocess
@@ -32,10 +33,15 @@ def require(ok, code):
 
 
 def run(args, timeout=60, input=None):
-    p = subprocess.run(args, input=input, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+    p = subprocess.run(args, input=input, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        timeout=timeout, env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin',
                                              'LANG': 'C.UTF-8', 'DEBIAN_FRONTEND': 'noninteractive'})
-    require(p.returncode == 0, 'trusted_command_failed')
+    if p.returncode != 0:
+        # Only forward this trusted CLI's fixed error code, never arbitrary subprocess output.
+        safe = re.fullmatch(rb'owner_control_failed:([A-Za-z0-9_]+)\n', p.stderr)
+        if Path(args[0]).name == 'owner-control' and safe:
+            raise Stop('preflight_' + safe[1].decode())
+        raise Stop('trusted_command_failed_' + Path(args[0]).name)
     return p.stdout
 
 

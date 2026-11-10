@@ -17,12 +17,14 @@ from owner_vm.sandbox import execute, github
 
 def preflight():
     cfg = config(gate=False)
+    fixture = protected(STATE / 'issuer/owner-boundary-fixture', cfg['issuer_uid'], private=True)
+    require(fixture.read_bytes() == b'harmless owner-only canary fixture\n', 'owner_fixture_missing_or_changed')
     result = execute(cfg, mode='probe')
     require(result['completed'], 'preflight_failed')
     original = json.loads(CONFIG.read_text())
     original['owner_isolation_verified'] = True
     write(CONFIG, json.dumps(original, indent=2) + '\n', mode=0o644)
-    return {'preflight_passed': True, 'run_id': result['run_id'],
+    return {'preflight_passed': True, 'run_id': result['run_id'], 'owner_fixture_exists_outside': True,
             'profile': result['profile'], 'full_coding_agent_verified': False,
             'external_photon_exclusion': 'owner acknowledged; not remotely proven'}
 
@@ -157,6 +159,13 @@ def main():
     except Exception as error:
         from owner_vm.common import Stop
         code = str(error) if type(error) is Stop else type(error).__name__
+        try:
+            import traceback
+            record('controlfailure', {'command': args.command, 'failure': code,
+                                     'frames': [{'file': Path(row.filename).name, 'line': row.lineno}
+                                                for row in traceback.extract_tb(error.__traceback__)]})
+        except Exception:
+            pass
         print('owner_control_failed:' + code, file=sys.stderr)
         return 2
     return 0
