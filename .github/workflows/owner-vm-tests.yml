@@ -1,0 +1,66 @@
+name: Owner VM bootstrap checks
+
+on:
+  pull_request:
+    branches: [main, issuer-kit-20261110]
+    paths: ['owner_vm/**', '.github/workflows/owner-vm-tests.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  owner-vm-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 -B -m unittest discover -s owner_vm -t . -v
+  owner-vm-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Real no-key bootstrap on this disposable hosted VM only
+        run: |
+          test "${RUNNER_ENVIRONMENT:-}" = github-hosted
+          test "${GITHUB_ACTIONS:-}" = true
+          sudo /usr/bin/python3 -I -B owner_vm/bootstrap.py prepare --fresh-isolated-vm
+      - name: Collect only non-secret no-key evidence
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/owner-vm-evidence"
+          sudo /usr/bin/python3 -I -B - "$RUNNER_TEMP/owner-vm-evidence" <<'PY'
+          import json, pathlib, sys
+          target = pathlib.Path(sys.argv[1])
+          for path in pathlib.Path('/var/lib/proofgate-canary/results').glob('*.json'):
+              value = path.read_bytes()
+              assert len(value) <= 65536
+              json.loads(value)
+              (target / path.name).write_bytes(value)
+          for name in ['installation.json', 'issuer.json']:
+              source = pathlib.Path('/etc/proofgate-canary') / name
+              if source.is_file():
+                  (target / name).write_bytes(source.read_bytes())
+          source = pathlib.Path('/etc/proofgate-canary/installation.json')
+          if source.is_file():
+              paths = set()
+              for name in json.loads(source.read_bytes())['files']:
+                  path = pathlib.Path(name)
+                  paths.update([path, *path.parents])
+              rows = []
+              for path in sorted(paths):
+                  meta = path.lstat()
+                  rows.append({'path': str(path), 'uid': meta.st_uid, 'mode': oct(meta.st_mode & 0o7777), 'symlink': path.is_symlink()})
+              (target / 'code-permissions.json').write_text(json.dumps(rows))
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: owner-vm-no-key-${{ github.run_id }}
+          path: ${{ runner.temp }}/owner-vm-evidence/
+          retention-days: 7
+          if-no-files-found: warn

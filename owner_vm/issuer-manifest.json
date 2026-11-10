@@ -1,0 +1,15 @@
+{
+  "revision": "5609432116921acad9f10ef05c17140c170d72fb",
+  "files": {
+    "issuer/INTEGRATION.md": "7d9575e2571b45a85691b900839543614ae8dba88c72363d4e750f3b12bf3d2e",
+    "issuer/__init__.py": "56b58228911115d8af413ae744a51c252a6b14c3e16bf2bf45d5e60851db06e7",
+    "issuer/core.py": "b836ed3fa3b4994a676910e14ddb41e8d70494eebca629d9df98ce9877abcb8a",
+    "issuer/issuer.service.in": "c36407f0e5c68262e53673a933be04981368e1f9787f2d3b5dca0c23a93d7630",
+    "issuer/launcher.py": "178657cc6a2b54660355aece8a5e0d83cb9fcc376ab4726432fc811c968942fc",
+    "issuer/owner-config.template.json": "fd73ce80e25b9e437908fb989c110bc33e906082dd83b1b284e5412f9a5e99e3",
+    "issuer/runtime.py": "1e267b225afcbb9dca0106b3b45682bd9ef2e32ce7dfbfea6cd3e8fe4ed63eed",
+    "issuer/server.py": "9ba0e8acf1511412aff5136dd51a2445c5a630e62084ce2e1bebb01d3d4649b3",
+    "issuer/test_core.py": "4d7c033d47e9ed437dc4b352ec1e32c517cba05855a69a99dc09fd11508a2378",
+    "issuer/test_runtime.py": "2cf97ac8987224f8361867077f9e80253d5f1669067077d9d06eb9ffa89aa8bf"
+  }
+}
