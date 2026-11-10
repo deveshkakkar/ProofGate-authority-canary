@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "app_id": 5690450,
+  "installation_id": 180587357,
+  "owner_id": 41484281,
+  "repository_id": 1452255523,
+  "repository": "deveshkakkar/ProofGate-authority-canary",
+  "permissions": {
+    "metadata": "read",
+    "contents": "write",
+    "pull_requests": "write",
+    "actions": "read",
+    "checks": "read",
+    "issues": "read",
+    "statuses": "read"
+  },
+  "issuer_uid": null,
+  "launcher_uid": null,
+  "worker_uid": null,
+  "photon_uid": null,
+  "socket_path": null,
+  "audit_path": null,
+  "state_path": null,
+  "key_path": null,
+  "worker_launcher_path": null,
+  "worker_launcher_sha256": null,
+  "owner_isolation_verified": false
+}
