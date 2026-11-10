@@ -112,6 +112,8 @@ def a14(number, human_ack):
     for path in (STATE / 'results').glob('trial*.json'):
         row = json.loads(protected(path, private=True).read_text())
         created = row.get('result', {}).get('pr') or {}
+        if not isinstance(created, dict):
+            continue  # A previous A14 observation records a PR number, not a new trial's PR object.
         if row.get('completed') is True and row.get('revocation_verified') is True and created.get('number') == number:
             candidates.append(row)
     require(len(candidates) == 1, 'unique_successful_local_trial_required')

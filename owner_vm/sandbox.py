@@ -106,7 +106,7 @@ def command(cfg, unit):
             '--property=CPUQuota=100%', '--property=RuntimeMaxSec=120', '--property=LimitCORE=0',
             '--property=LimitFSIZE=1048576', '--property=NoNewPrivileges=yes', '--property=ProtectHome=yes',
             '--property=ProtectControlGroups=yes', '--property=PrivateTmp=yes',
-            '/usr/bin/bwrap', '--unshare-all', '--die-with-parent', '--new-session', '--cap-drop', 'ALL',
+            '/usr/bin/bwrap', '--unshare-all', '--unshare-user', '--die-with-parent', '--new-session', '--cap-drop', 'ALL',
             '--uid', str(cfg['worker_uid']), '--gid', str(cfg['worker_gid']), '--disable-userns',
             '--clearenv', '--ro-bind', '/usr', '/usr', '--ro-bind', '/lib', '/lib',
             '--ro-bind', '/lib64', '/lib64', '--ro-bind', str(ROOT / 'worker-root'), '/app',

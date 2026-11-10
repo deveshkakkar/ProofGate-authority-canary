@@ -7,6 +7,10 @@ import json
 from pathlib import Path
 import tarfile
 import tempfile
+import time
+import os
+import stat
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch, Mock
 
@@ -111,6 +115,7 @@ class GatewayTests(unittest.TestCase):
     def test_command_has_real_uid_and_no_bearer_or_host_network(self):
         args = sandbox.command({'worker_uid': 812, 'worker_gid': 812}, 'proofgate-worker-fixture.service')
         for value in ['--unshare-all', '--disable-userns', '--clearenv', '--property=MemoryMax=256M',
+                      '--unshare-user',
                       '--property=MemorySwapMax=0', '--property=TasksMax=16', '--property=User=812',
                       '--property=KillMode=control-group', '--property=RuntimeMaxSec=120']:
             self.assertIn(value, args)
@@ -138,6 +143,51 @@ class ControllerTests(unittest.TestCase):
             Path(directory, 'results').mkdir()
             with self.assertRaises(Stop): control.a14(7, True)
             lease.assert_not_called()
+
+    def test_actual_fifo_nonblocking_open_rejects_before_parser(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); fifo = root / 'fifo'; os.mkfifo(fifo, 0o600)
+            original = Path.lstat
+            def fixture_ancestors(path):
+                value = original(path)
+                # Unit fixture substitutes protected ancestor modes; FIFO itself is real kernel IPC.
+                if stat.S_ISDIR(value.st_mode):
+                    return SimpleNamespace(st_uid=value.st_uid, st_mode=value.st_mode & ~0o022)
+                return value
+            with patch.object(control, 'config', return_value={'key_path': str(root / 'destination')}), \
+                 patch.dict(os.environ, {'SUDO_UID': str(os.getuid())}), \
+                 patch.object(Path, 'lstat', fixture_ancestors), patch.object(control.subprocess, 'run') as parser:
+                start = time.monotonic()
+                with self.assertRaises(Stop): control.import_key(str(fifo))
+                self.assertLess(time.monotonic() - start, 0.5)
+                parser.assert_not_called()
+
+    def test_a14_exact_trial_latest_approval_and_producer_are_required(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); results = root / 'results'; results.mkdir(); run_id = 'a' * 32
+            record = {'completed': True, 'revocation_verified': True, 'result':
+                      {'run_id': run_id, 'pr': {'number': 7, 'head_sha': 'b' * 40}}}
+            (results / 'trialfirst.json').write_text(json.dumps(record))
+            (results / 'trialobservation.json').write_text(json.dumps(
+                {'completed': True, 'revocation_verified': True, 'result': {'pr': 7}}))
+            pr = {'user': {'login': 'proofgate-coder[bot]'}, 'merged': True, 'merged_by': {'id': OWNER_ID},
+                  'head': {'sha': 'b' * 40, 'ref': 'authority-positive-' + run_id}, 'merge_commit_sha': 'c' * 40}
+            reviews = [{'user': {'id': OWNER_ID}, 'state': 'APPROVED', 'commit_id': 'b' * 40}]
+            checks = {'check_runs': [{'name': 'offline', 'conclusion': 'success', 'app': {'id': 15368}}]}
+            def observe(method, path, token):
+                return 200, reviews if '/reviews?' in path else checks if '/check-runs' in path else pr
+            with patch.object(control, 'STATE', root), patch.object(control, 'config', return_value={}), \
+                 patch.object(control, 'protected', side_effect=lambda p, **k: p), \
+                 patch.object(control, 'github', side_effect=observe), \
+                 patch.object(control, 'with_lease', side_effect=lambda cfg, action: action('synthetic')):
+                self.assertEqual(control.a14(7, True)['pr'], 7)
+                pr['head']['sha'] = 'd' * 40
+                with self.assertRaises(Stop): control.a14(7, True)
+                pr['head']['sha'] = 'b' * 40
+                reviews.append({'user': {'id': OWNER_ID}, 'state': 'CHANGES_REQUESTED', 'commit_id': 'b' * 40})
+                with self.assertRaises(Stop): control.a14(7, True)
+                reviews.pop(); checks['check_runs'][0]['app']['id'] = 15369
+                with self.assertRaises(Stop): control.a14(7, True)
 
 
 if __name__ == '__main__':
