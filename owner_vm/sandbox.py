@@ -11,6 +11,7 @@ import signal
 import ssl
 import subprocess
 import time
+import tempfile
 import uuid
 
 from .common import ROOT, REPO, REPO_ID, OWNER_ID, require, run, record, Stop
@@ -161,9 +162,12 @@ def execute(cfg, mode='probe', token=None):
               'profile': 'fixed-synthetic-python-worker-v1', 'full_coding_agent_verified': False,
               'A13': 'UNVERIFIED', 'events': gateway.events}
     process = None
+    # Only this fixed no-key profile may retain startup text. Never capture it after key import.
+    diagnostic = tempfile.TemporaryFile() if mode == 'probe' and not Path(cfg['key_path']).exists() else None
     try:
         process = subprocess.Popen(command(cfg, unit), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=subprocess.DEVNULL, env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'},
+                                   stderr=diagnostic if diagnostic is not None else subprocess.DEVNULL,
+                                   env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin'},
                                    close_fds=True, bufsize=0)
         selector = selectors.DefaultSelector(); selector.register(process.stdout, selectors.EVENT_READ)
         pending = bytearray(); end = time.monotonic() + 115; hello = False; done = False
@@ -212,4 +216,10 @@ def execute(cfg, mode='probe', token=None):
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
             if process.poll() is None:
                 process.kill(); process.wait(timeout=5)
+        if diagnostic is not None:
+            diagnostic.seek(0)
+            text = diagnostic.read(4096).decode('utf-8', errors='replace')
+            if text:
+                result['no_key_startup_diagnostic'] = text
+            diagnostic.close()
         record(gateway.run_id, result)
