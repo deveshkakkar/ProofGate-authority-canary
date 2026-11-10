@@ -214,7 +214,9 @@ class Issuer:
         if set(request) == {'op', 'lease_id', 'outcome'} and request['op'] == 'release':
             require(request['outcome'] in ('success', 'failure', 'timeout', 'launcher_failure'), 'invalid_outcome')
             require(self.lease is not None and request['lease_id'] == self.lease['id'], 'unknown_lease')
-            self.event('worker_finished', lease_id=self.lease['id'], outcome=request['outcome'])
-            self.release()
+            try:
+                self.event('worker_finished', lease_id=self.lease['id'], outcome=request['outcome'])
+            finally:
+                self.release()  # Completion auditing must never bypass revocation.
             return {'released': True}
         raise Denied('invalid_request')

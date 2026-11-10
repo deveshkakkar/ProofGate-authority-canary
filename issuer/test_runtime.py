@@ -148,6 +148,21 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaises(Denied): issuer.issue()
         self.assertEqual(provider.calls, [])
 
+    def test_completion_audit_failure_revokes_in_the_actual_release_handler(self):
+        provider, audit, _, issuer = test_core.IssuerTests().setup_issuer(); lease = issuer.issue()
+        def bad_audit(row):
+            if row['event'] == 'worker_finished': raise OSError('synthetic full audit')
+            audit.append(row)
+        issuer.audit = bad_audit
+        request = {'op': 'release', 'lease_id': lease['lease_id'], 'outcome': 'success'}
+        connection = Mock(); connection.makefile.return_value = io.BytesIO((json.dumps(request) + '\n').encode())
+        with patch.object(server, 'peer_uid', return_value=82):
+            server.handle(connection, issuer, 82, lambda: False)
+        self.assertIsNone(issuer.lease)
+        self.assertTrue(issuer.poisoned)
+        self.assertTrue(any(call[0] == 'DELETE' for call in provider.calls))
+        self.assertEqual(audit[-1]['event'], 'request_denied')
+
 
 if __name__ == '__main__':
     unittest.main()
