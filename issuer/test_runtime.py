@@ -163,6 +163,20 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(any(call[0] == 'DELETE' for call in provider.calls))
         self.assertEqual(audit[-1]['event'], 'request_denied')
 
+    def test_pre_dispatch_audit_failure_revokes_an_existing_lease(self):
+        provider, audit, _, issuer = test_core.IssuerTests().setup_issuer(); lease = issuer.issue()
+        def bad_audit(row):
+            if row['event'] == 'launcher_request': raise OSError('synthetic pre-dispatch audit failure')
+            audit.append(row)
+        issuer.audit = bad_audit
+        request = {'op': 'release', 'lease_id': lease['lease_id'], 'outcome': 'success'}
+        connection = Mock(); connection.makefile.return_value = io.BytesIO((json.dumps(request) + '\n').encode())
+        with patch.object(server, 'peer_uid', return_value=82):
+            server.handle(connection, issuer, 82, lambda: False)
+        self.assertIsNone(issuer.lease)
+        self.assertTrue(issuer.poisoned)
+        self.assertTrue(any(call[0] == 'DELETE' for call in provider.calls))
+
 
 if __name__ == '__main__':
     unittest.main()

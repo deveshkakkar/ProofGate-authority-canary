@@ -28,8 +28,8 @@ def handle(connection, issuer, launcher_uid, stopping):
             raise Denied('issuer_stopping')
         connection.sendall(json.dumps(result).encode() + b'\n')
     except Exception:
-        if issued_here:
-            issuer.release()  # A disconnected launcher must not leave a minted token active.
+        if issued_here or issuer.poisoned:
+            issuer.release()  # Disconnect or any fatal audit failure must contain an active token.
         issuer.event('request_denied', peer_uid=uid)
         try:
             connection.sendall(b'{"error":"request_denied"}\n')
