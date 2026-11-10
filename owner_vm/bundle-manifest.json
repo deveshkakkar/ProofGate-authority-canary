@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "files": {
+    "OPERATE.md": "bdbc1d0f1daee51c23046f97825bba766b9970c1a4f5a3e5b8be597bd1df26d4",
+    "__init__.py": "818a27d5a1512fcb16696e46ebf4a15f3b227a67c172b0ca7e200c59682ecddf",
+    "bootstrap.py": "77648acd691dfc6f463df7c23894f38c52bf8ff5a7e732822f398fb895a71cc9",
+    "common.py": "fe8cfc3bcbc3131652858d2e6b5003f7c9ce1d538d659a6c3dd7668241dc8019",
+    "control.py": "bc15eb221bcf45cc4b73b9117c212e299ad9bc4b9427ec8b298180e0d1d3caaf",
+    "entry.py": "18bae40ff4f4e12732fcc33ebed82d6760dc52871d6a10eedba3c92336e791d9",
+    "issuer-manifest.json": "16ed9111156c276e909d082cbd86b8b0a352db9af5277ebb3eeacc4d561fc66e",
+    "make_bundle.py": "e64d7b034897cc01e68a822ae095f8ac74effa1f9f83f50ea601fa9da6d55e6e",
+    "requirements.lock": "48ba26888248622784858cb1f76aefa236d3d802857f70929ffe82f9ae393cd7",
+    "sandbox.py": "3f247ca049c35d4873ac96407b48532e93281e6a223e08b47a6f992d5ff4cff5",
+    "test_vm.py": "a109b7949712cdf5fe28bf59c73697bf65d21a2a8f4814bf35e583bf801ce177",
+    "wheels.lock.json": "5994650c2dce20c2225147d235c4f908e94e8740a276f0acb70f33c141b9efb3",
+    "worker.py": "c8634cffdf48837e50ac3f9604c0e917768b80f7b70f922598d3bd6cd656daa4"
+  }
+}
