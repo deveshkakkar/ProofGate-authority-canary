@@ -1,0 +1,20 @@
+name: Host boundary unprivileged checks
+
+on:
+  pull_request:
+    branches: [main, owner-bootstrap-20261110]
+    paths: ['host_boundary/**', '.github/workflows/host-boundary-tests.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  host-boundary-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Harmless fixtures only; no root, daemon API or VM access
+        run: python3 -B -m unittest discover -s host_boundary -t . -v
