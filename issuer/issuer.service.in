@@ -1,0 +1,41 @@
+# NOT INSTALLABLE until owner substitutes every @...@ value and reviews actual paths.
+[Unit]
+Description=Owner-controlled ProofGate canary credential issuer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@OWNER_SUPPLIED_ISSUER_OS_USER@
+Group=@OWNER_SUPPLIED_PRIVATE_IPC_OS_GROUP@
+ExecStart=@OWNER_SUPPLIED_VENV_PYTHON@ -I -B -m issuer.server @OWNER_SUPPLIED_CONFIG_PATH@
+WorkingDirectory=/
+Restart=no
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+LockPersonality=true
+LimitCORE=0
+MemoryMax=128M
+TasksMax=16
+CPUQuota=25%
+RuntimeMaxSec=1800
+TimeoutStopSec=120
+ReadWritePaths=@OWNER_SUPPLIED_SOCKET_DIRECTORY@ @OWNER_SUPPLIED_AUDIT_FILE@ @OWNER_SUPPLIED_STATE_FILE@
+ReadOnlyPaths=@OWNER_SUPPLIED_CONFIG_PATH@ @OWNER_SUPPLIED_KEY_PATH@
+Environment=PYTHONDONTWRITEBYTECODE=1
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

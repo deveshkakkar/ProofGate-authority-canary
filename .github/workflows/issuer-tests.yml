@@ -1,0 +1,29 @@
+name: Owner issuer kit regressions
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'issuer/**'
+      - 'pyproject.toml'
+      - '.github/workflows/issuer-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'issuer/**'
+      - 'pyproject.toml'
+      - '.github/workflows/issuer-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  issuer-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run synthetic provider and local OS regressions without credentials
+        run: python3 -B -m unittest discover -s issuer -t . -v
