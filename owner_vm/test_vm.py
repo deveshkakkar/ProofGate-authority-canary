@@ -162,32 +162,22 @@ class ControllerTests(unittest.TestCase):
                 self.assertLess(time.monotonic() - start, 0.5)
                 parser.assert_not_called()
 
-    def test_a14_exact_trial_latest_approval_and_producer_are_required(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory); results = root / 'results'; results.mkdir(); run_id = 'a' * 32
-            record = {'completed': True, 'revocation_verified': True, 'result':
-                      {'run_id': run_id, 'pr': {'number': 7, 'head_sha': 'b' * 40}}}
-            (results / 'trialfirst.json').write_text(json.dumps(record))
-            (results / 'trialobservation.json').write_text(json.dumps(
-                {'completed': True, 'revocation_verified': True, 'result': {'pr': 7}}))
-            pr = {'user': {'login': 'proofgate-coder[bot]'}, 'merged': True, 'merged_by': {'id': OWNER_ID},
-                  'head': {'sha': 'b' * 40, 'ref': 'authority-positive-' + run_id}, 'merge_commit_sha': 'c' * 40}
-            reviews = [{'user': {'id': OWNER_ID}, 'state': 'APPROVED', 'commit_id': 'b' * 40}]
-            checks = {'check_runs': [{'name': 'offline', 'conclusion': 'success', 'app': {'id': 15368}}]}
-            def observe(method, path, token):
-                return 200, reviews if '/reviews?' in path else checks if '/check-runs' in path else pr
-            with patch.object(control, 'STATE', root), patch.object(control, 'config', return_value={}), \
-                 patch.object(control, 'protected', side_effect=lambda p, **k: p), \
-                 patch.object(control, 'github', side_effect=observe), \
-                 patch.object(control, 'with_lease', side_effect=lambda cfg, action: action('synthetic')):
-                self.assertEqual(control.a14(7, True)['pr'], 7)
-                pr['head']['sha'] = 'd' * 40
-                with self.assertRaises(Stop): control.a14(7, True)
-                pr['head']['sha'] = 'b' * 40
-                reviews.append({'user': {'id': OWNER_ID}, 'state': 'CHANGES_REQUESTED', 'commit_id': 'b' * 40})
-                with self.assertRaises(Stop): control.a14(7, True)
-                reviews.pop(); checks['check_runs'][0]['app']['id'] = 15369
-                with self.assertRaises(Stop): control.a14(7, True)
+    def test_a14_cli_failure_never_overwrites_historical_controlfailure(self):
+        with patch('sys.argv', ['owner-control', 'observe-a14', '4', '--human-ui-approval-and-merge']), \
+             patch.object(control.os, 'getuid', return_value=0), \
+             patch.object(control.resource, 'setrlimit'), \
+             patch.object(control, 'a14', side_effect=Stop('synthetic_verification_failure')), \
+             patch.object(control, 'record') as record, patch('sys.stderr'):
+            self.assertEqual(control.main(), 2)
+            record.assert_not_called()
+
+    def test_a14_delegates_to_credential_free_recovery_and_never_acquires_lease(self):
+        with patch.object(control, 'config', return_value={}), \
+             patch('owner_vm.a14.recover', return_value={'A14': 'synthetic'}) as recovery, \
+             patch.object(control, 'with_lease') as lease:
+            self.assertEqual(control.a14(4, True), {'A14': 'synthetic'})
+            recovery.assert_called_once_with(4, True)
+            lease.assert_not_called()
 
 
 if __name__ == '__main__':

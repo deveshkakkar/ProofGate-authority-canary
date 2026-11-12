@@ -2,7 +2,7 @@ name: Owner VM bootstrap checks
 
 on:
   pull_request:
-    branches: [main, issuer-kit-20261110]
+    branches: [main, issuer-kit-20261110, owner-bootstrap-20261110]
     paths: ['owner_vm/**', '.github/workflows/owner-vm-tests.yml']
 
 permissions:

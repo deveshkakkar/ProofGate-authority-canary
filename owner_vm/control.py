@@ -106,41 +106,10 @@ def trial():
 
 def a14(number, human_ack):
     require(type(number) is int and number > 0 and human_ack, 'human_ui_ack_required')
-    cfg = config()
-    # Bind observation to this machine's successful, revoked authenticated trial.
-    candidates = []
-    for path in (STATE / 'results').glob('trial*.json'):
-        row = json.loads(protected(path, private=True).read_text())
-        created = row.get('result', {}).get('pr') or {}
-        if not isinstance(created, dict):
-            continue  # A previous A14 observation records a PR number, not a new trial's PR object.
-        if row.get('completed') is True and row.get('revocation_verified') is True and created.get('number') == number:
-            candidates.append(row)
-    require(len(candidates) == 1, 'unique_successful_local_trial_required')
-    recorded = candidates[0]['result']['pr']
-    run_id = candidates[0]['result']['run_id']
-    def observe(token):
-        prefix = '/repos/' + REPO + '/pulls/' + str(number)
-        status, pr = github('GET', prefix, token)
-        require(status == 200 and pr.get('user', {}).get('login') == 'proofgate-coder[bot]'
-                and pr.get('merged') is True and pr.get('merged_by', {}).get('id') == OWNER_ID,
-                'human_merge_not_observed')
-        require(pr['head']['sha'] == recorded['head_sha'] and pr['head']['ref'] == 'authority-positive-' + run_id,
-                'trial_revision_mismatch')
-        status, reviews = github('GET', prefix + '/reviews?per_page=100', token)
-        owner_reviews = [r for r in reviews if r.get('user', {}).get('id') == OWNER_ID] if status == 200 else []
-        require(owner_reviews and owner_reviews[-1].get('state') == 'APPROVED'
-                and owner_reviews[-1].get('commit_id') == pr['head']['sha'],
-                'matching_owner_approval_missing')
-        status, checks = github('GET', '/repos/' + REPO + '/commits/' + recorded['head_sha'] + '/check-runs', token)
-        require(status == 200 and any(c.get('name') == 'offline' and c.get('conclusion') == 'success'
-                                     and c.get('app', {}).get('id') == 15368 for c in checks.get('check_runs', [])),
-                'trusted_offline_check_missing')
-        return {'A14': 'OWNER_ATTESTED_HUMAN_UI_AND_GITHUB_MERGE_OBSERVED', 'pr': number,
-                'head_sha': pr['head']['sha'], 'merge_commit_sha': pr['merge_commit_sha'],
-                'approval_source': 'GitHub review metadata plus explicit owner human-UI acknowledgment',
-                'independent_admission_verified': False, 'A13': 'UNVERIFIED'}
-    return with_lease(cfg, observe)
+    config()  # Installed pins/binding only. Observation never needs another App lease.
+    from owner_vm.a14 import recover
+    return recover(number, human_ack)
+
 
 
 def main():
@@ -161,13 +130,15 @@ def main():
     except Exception as error:
         from owner_vm.common import Stop
         code = str(error) if type(error) is Stop else type(error).__name__
-        try:
-            import traceback
-            record('controlfailure', {'command': args.command, 'failure': code,
-                                     'frames': [{'file': Path(row.filename).name, 'line': row.lineno}
-                                                for row in traceback.extract_tb(error.__traceback__)]})
-        except Exception:
-            pass
+        # Recovery must never replace the historical failed-observation receipt.
+        if args.command != 'observe-a14':
+            try:
+                import traceback
+                record('controlfailure', {'command': args.command, 'failure': code,
+                                         'frames': [{'file': Path(row.filename).name, 'line': row.lineno}
+                                                    for row in traceback.extract_tb(error.__traceback__)]})
+            except Exception:
+                pass
         print('owner_control_failed:' + code, file=sys.stderr)
         return 2
     return 0
